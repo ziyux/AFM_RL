@@ -147,17 +147,33 @@ class Agent:
             accuracy = 0
             next_state = state
             done = True
+
+            if np.max(np.abs(self.features[:,state])) == 0:
+                print(self.features[:,state])
             return accuracy, next_state, done
 
         if operator in self.index:
             index = self.index[operator]
-            next_state = index
-            if self.accuracy[index] != -1:
-                accuracy = self.accuracy[index]
+            if index == -1:
+                accuracy = 0
+                next_state = state
+                if type(variables) == tuple:
+                    comp = max(self.comp[state], self.comp[j]) + 1
+                else:
+                    comp = self.comp[state] + 1
+
+                if comp >= self.max_comp:
+                    done = True
+                else:
+                    done = False
             else:
-                accuracy = self.compute_accuracy(self.features[:, index])
-                self.accuracy[index] = accuracy
-            done = self.done[index]
+                next_state = index
+                if self.accuracy[index] != -1:
+                    accuracy = self.accuracy[index]
+                else:
+                    accuracy = self.compute_accuracy(self.features[:, index])
+                    self.accuracy[index] = accuracy
+                done = self.done[index]
             return accuracy, next_state, done
 
         if operator[:3] in ['sum', 'mul']:
@@ -176,39 +192,54 @@ class Agent:
                 done = self.done[index]
                 return accuracy, next_state, done
 
-        self.index[operator] = len(self.tag)
-        tag = operator.split(',')
-        for i in range(1, len(tag)):
-            tag[i] = int(tag[i])
-        self.tag.append(tag)
+        ##########
+        # print(operator)
+        # print('variables', variables)
+        if np.max(np.abs(variables[0]))==0:
+            print(variables)
+        ##########
+
         if type(variables) == tuple:
             new_fea = func(variables[0], variables[1])
-            self.comp.append(max(self.comp[state], self.comp[j]) + 1)
+            comp = max(self.comp[state], self.comp[j]) + 1
         else:
             new_fea = func(variables)
-            self.comp.append(self.comp[state] + 1)
+            comp = self.comp[state] + 1
+
+        if comp >= self.max_comp:
+            done = True
+        else:
+            done = False
+        ###########
+        # print('newfea', new_fea[:])
+        ###########
         if (np.max(np.abs(new_fea[:])) >= 1e-11) & (np.max(np.abs(new_fea[:])) <= 1e11):
             if np.max(np.abs(new_fea[:] - new_fea[0])) >= 1e-8:
                 accuracy = self.compute_accuracy(new_fea)
                 next_state = len(self.accuracy)
-                if (self.comp[-1]) >= self.max_comp:
-                    done = True
-                else:
-                    done = False
+
+                self.index[operator] = len(self.tag)
+                tag = operator.split(',')
+                for i in range(1, len(tag)):
+                    tag[i] = int(tag[i])
+                self.tag.append(tag)
+                self.features = np.hstack((self.features, new_fea))
+                self.accuracy.append(accuracy)
+                self.comp.append(comp)
+                self.done.append(done)
 
             else:
                 accuracy = 0
                 next_state = state
-                done = True
+                self.index[operator] = -1
+                print("abandon1")
+
         else:
-            new_fea = np.zeros(new_fea.shape)
+            # new_fea = np.zeros(new_fea.shape)
             accuracy = 0
             next_state = state
-            done = True
-
-        self.features = np.hstack((self.features, new_fea))
-        self.accuracy.append(accuracy)
-        self.done.append(done)
+            self.index[operator] = -1
+            print("abandon2")
 
         return accuracy, next_state, done
 
