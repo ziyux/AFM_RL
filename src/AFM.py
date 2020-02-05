@@ -2,7 +2,6 @@ import csv
 import numpy as np
 from AFM_agent import Agent
 from AFM_DQL import DQL
-from Overlap import Overlap
 import matplotlib.pyplot as plt
 
 class OpenCSVfile(object):
@@ -61,7 +60,6 @@ def read_data(filename, dataloc):
 
 def average_sliding_window(data, N):
     mylist = data
-    N = N
     cumsum, moving_aves = [0], []
     for i, x in enumerate(mylist, 1):
         cumsum.append(cumsum[i - 1] + x)
@@ -88,10 +86,10 @@ act = ['exp', 'sqr', 'div', 'sub', 'mul']
 # act = ['exp', 'sum', 'p-1']
 # act = ['exp', 'div', 'p+2']
 env = Agent(fea, res, feaname, act, max_comp=3)
-MAX_DIM = 2
+MAX_DIM = 1
 learning = []
 for d in range(MAX_DIM):
-    episodes = 100
+    episodes = 30
     exp_replay = True
     use_target = True
     score_list = []
@@ -132,3 +130,4 @@ for d in range(MAX_DIM):
     plt.show()
     average_sliding_window(score_list, 10)
     print(env.features.shape)
+output_feature_space(env.tag, env.features)
