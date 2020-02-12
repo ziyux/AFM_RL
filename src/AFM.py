@@ -57,36 +57,39 @@ class AFM(object):
             target = np.array(target, dtype=float)
         return sample_name, fea_name, sample, fea, target
 
-    def output_feature_space(self, sample_name, fea):
+    def output_feature_space(self, tag, fea, reward, selected_set):
         fea_name = []
-        for i in range(len(sample_name)):
+        for i in range(len(tag)):
             temp = ''
-            for j in range(len(sample_name[i])):
-                temp += str(sample_name[i][j])
-                if j == len(sample_name[i]) - 1:
+            for j in range(len(tag[i])):
+                temp += str(tag[i][j])
+                if j == len(tag[i]) - 1:
                     break
                 temp += ','
             fea_name.append(temp)
-        output = np.vstack((fea_name, fea))
-        self.save_csv_file(str(self.dim)+'D_feature_space', output)
+        feature = np.vstack((fea_name, reward, fea))
+        name = np.vstack((self.sample_name, self.sample))
+        output = np.hstack((name, feature))
+        self.save_csv_file(str(self.dim)+'D_feature_space.csv', output)
         return fea_name
 
-    def average_sliding_window(self, data, N):
+    def average_sliding_window(self, data, n):
         mylist = data
         cumsum, moving_aves = [0], []
         for i, x in enumerate(mylist, 1):
             cumsum.append(cumsum[i - 1] + x)
-            if i >= N:
-                moving_ave = (cumsum[i] - cumsum[i - N]) / N
+            if i >= n:
+                moving_ave = (cumsum[i] - cumsum[i - n]) / n
                 # can do stuff with moving_ave here
                 moving_aves.append(moving_ave)
 
-        plt.title('Average rewards of every ' + str(N) + ' episodes')
+        plt.title('Average rewards of every ' + str(n) + ' episodes')
         plt.xlabel('Episode')
         plt.plot(range(len(moving_aves)), moving_aves)
         plt.show()
 
-    def new_loop(self, iteration):
+    def new_loop(self, iteration, hidden_layer=(150,120), batch_size=32, epsilon=1.0, epsilon_decay=0.99, gamma=0.99,
+                 alpha=0.001, func_approximation='NN'):
         if self.increase_dim:
             selected = np.array(self.env.reward).argsort()[-5:][::-1]
             for i in range(self.increase_dim_num):
@@ -95,8 +98,9 @@ class AFM(object):
             self.dim += self.increase_dim_num
             self.score_list = []
         if self.increase_dim | (iteration == 0):
-            self.learning.append(DQL(len(self.act), self.fea.shape[0], hidden_layer=(150, 120), batch_size=32,
-                                     epsilon=1.0, epsilon_decay=0.99, gamma=0.99, alpha=0.001, func_approximation='NN'))
+            self.learning.append(DQL(len(self.act), self.fea.shape[0], hidden_layer=hidden_layer, batch_size=batch_size,
+                                     epsilon=epsilon, epsilon_decay=epsilon_decay, gamma=gamma, alpha=alpha,
+                                     func_approximation=func_approximation))
 
     def loop_control(self, action=None):
         if action is None:
@@ -185,7 +189,7 @@ class AFM(object):
         plt.show()
         self.average_sliding_window(self.score_list, 10)
         print(self.env.features.shape)
-        self.output_feature_space(self.env.tag, self.env.features)
+        self.output_feature_space(self.env.tag, self.env.features, self.env.reward, self.env.selected_set)
 
 
 MODE = 0
@@ -202,6 +206,7 @@ increase_dim = False
 for iteration in range(MAX_ITER):
     eng.new_loop(iteration)
     eng.main()
-    action = ['Y', 0, 0]
+    action = ['Q', 0, 0]
     if eng.loop_control(action):
         break
+
