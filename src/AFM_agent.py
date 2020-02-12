@@ -1,11 +1,8 @@
 import numpy as np
-from sklearn import linear_model
 from sklearn.linear_model import LogisticRegression
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
-import matplotlib.pyplot as plt
-from sklearn.svm import l1_min_c
 import itertools
 
 class Agent:
